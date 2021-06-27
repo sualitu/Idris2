@@ -663,6 +663,9 @@ mutual
     reflect fc defs lhs env UniqueSearch = getCon fc defs (reflectionttimp "UniqueSearch")
     reflect fc defs lhs env External = getCon fc defs (reflectionttimp "External")
     reflect fc defs lhs env NoNewtype = getCon fc defs (reflectionttimp "NoNewtype")
+    reflect fc defs lhs env (DataTotality t)
+        = do x' <- reflect fc defs lhs env t
+             appCon fc defs (reflectionttimp "DataTotality") [x']
 
   export
   Reflect ImpData where

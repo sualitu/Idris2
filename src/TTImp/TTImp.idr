@@ -256,6 +256,7 @@ mutual
        UniqueSearch : DataOpt -- auto implicit search must check result is unique
        External : DataOpt -- implemented externally
        NoNewtype : DataOpt -- don't apply newtype optimisation
+       DataTotality : TotalReq -> DataOpt
 
   export
   Eq DataOpt where
@@ -1032,6 +1033,8 @@ mutual
     toBuf b UniqueSearch = tag 2
     toBuf b External = tag 3
     toBuf b NoNewtype = tag 4
+    toBuf b (DataTotality t)
+        = do tag 5; toBuf b t
 
     fromBuf b
         = case !getTag of
@@ -1041,6 +1044,8 @@ mutual
                2 => pure UniqueSearch
                3 => pure External
                4 => pure NoNewtype
+               5 => do t <- fromBuf b
+                       pure (DataTotality t)
                _ => corrupt "DataOpt"
 
   export

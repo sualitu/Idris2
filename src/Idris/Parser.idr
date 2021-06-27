@@ -1059,9 +1059,9 @@ dataOpt
   <|> (exactIdent "external" $> External)
   <|> (exactIdent "noNewtype" $> NoNewtype)
 
-dataBody : OriginDesc -> Int -> WithBounds t -> Name -> IndentInfo -> PTerm ->
+dataBody : OriginDesc -> Int -> WithBounds t -> Name -> IndentInfo -> PTerm -> TotalReq ->
           EmptyRule PDataDecl
-dataBody fname mincol start n indents ty
+dataBody fname mincol start n indents ty totality
     = do atEndIndent indents
          pure (MkPLater (boundToFC fname start) n ty)
   <|> do b <- bounds (do decoratedKeyword fname "where"
@@ -1069,24 +1069,32 @@ dataBody fname mincol start n indents ty
                          cs <- blockAfter mincol (tyDecls (mustWork $ decoratedDataConstructorName fname) "" fname)
                          pure (opts, concatMap forget cs))
          (opts, cs) <- pure b.val
+         let opts = (DataTotality totality) :: opts
          pure (MkPData (boundToFC fname (mergeBounds start b)) n ty opts cs)
 
 gadtData : OriginDesc -> Int -> WithBounds t ->
-           WithBounds Name -> IndentInfo -> Rule PDataDecl
-gadtData fname mincol start tyName indents
+           WithBounds Name -> IndentInfo -> TotalReq -> Rule PDataDecl
+gadtData fname mincol start tyName indents totality
     = do decoratedSymbol fname ":"
          commit
          ty <- expr pdef fname indents
-         dataBody fname mincol start tyName.val indents ty
+         dataBody fname mincol start tyName.val indents ty totality
+
+totalityOpt : OriginDesc -> Rule TotalReq
+totalityOpt fname
+    = (decoratedKeyword fname "partial" $> PartialOK)
+  <|> (decoratedKeyword fname "total" $> Total)
+  <|> (decoratedKeyword fname "covering" $> CoveringOnly)
 
 dataDeclBody : OriginDesc -> IndentInfo -> Rule PDataDecl
 dataDeclBody fname indents
     = do b <- bounds (do col <- column
+                         totality <- totalityOpt fname
                          decoratedKeyword fname "data"
                          n <- mustWork (bounds $ decoratedDataTypeName fname)
-                         pure (col, n))
-         (col, n) <- pure b.val
-         simpleData fname b n indents <|> gadtData fname col b n indents
+                         pure (col, n, totality))
+         (col, n, totality) <- pure b.val
+         simpleData fname b n indents <|> gadtData fname col b n indents totality
 
 dataDecl : OriginDesc -> IndentInfo -> Rule PDecl
 dataDecl fname indents
@@ -1114,11 +1122,6 @@ extension
     = (exactIdent "ElabReflection" $> ElabReflection)
   <|> (exactIdent "Borrowing" $> Borrowing)
 
-totalityOpt : OriginDesc -> Rule TotalReq
-totalityOpt fname
-    = (decoratedKeyword fname "partial" $> PartialOK)
-  <|> (decoratedKeyword fname "total" $> Total)
-  <|> (decoratedKeyword fname "covering" $> CoveringOnly)
 
 logLevel : Rule (Maybe LogLevel)
 logLevel
