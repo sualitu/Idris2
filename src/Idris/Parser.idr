@@ -1089,7 +1089,7 @@ totalityOpt fname
 dataDeclBody : OriginDesc -> IndentInfo -> Rule PDataDecl
 dataDeclBody fname indents
     = do b <- bounds (do col <- column
-                         totality <- totalityOpt fname
+                         totality <- option PartialOK $ totalityOpt fname
                          decoratedKeyword fname "data"
                          n <- mustWork (bounds $ decoratedDataTypeName fname)
                          pure (col, n, totality))
